@@ -1,0 +1,16 @@
+[Unit]
+Description=zVirt Exporter Service
+After=syslog.target
+After=network.target
+
+[Service]
+EnvironmentFile=/home/zvirt-exporter/.bash_profile
+Type=simple
+User=zvirt-exporter
+Group=zvirt-exporter
+WorkingDirectory=/opt/zvirt-exporter
+ExecStart=/usr/local/bin/gunicorn -k gevent -w 1 -b 0.0.0.0:9190 zvirt-exporter:app --timeout=60
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

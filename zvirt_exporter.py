@@ -2,13 +2,14 @@
 
 import json
 import time
+import logging
 import asyncio
 import aiohttp
 from os import getenv
-from flask import Flask, Response
+from fastapi import FastAPI, Response
 from threading import Lock
-import urllib3
-urllib3.disable_warnings()
+logger = logging.getLogger(__name__)
+log = logging.getLogger("zvirt_exporter")
 
 
 VIRT_SCHEME = getenv("VIRT_SCHEME", "")
@@ -27,7 +28,7 @@ CACHE_LOCK = Lock()
 user = f"{USERNAME}@{DOMAIN}"
 password = PASSWORD
 
-app = Flask(__name__)
+app = FastAPI()
 
 
 async def get_token(session):
@@ -921,32 +922,36 @@ async def gather_statistic():
         return output
 
 
-async def get_cached_metrics():
-    now = time.time()
+async def metrics_updater():
+    global METRICS_CACHE
 
-    if METRICS_CACHE["data"] and now - METRICS_CACHE["timestamp"] < CACHE_TTL:
-        return METRICS_CACHE["data"]
+    while True:
+        start = time.time()
 
-    with CACHE_LOCK:
-        now - time.time()
-        if METRICS_CACHE["data"] and now - METRICS_CACHE["timestamp"] < CACHE_TTL:
-            return METRICS_CACHE["data"]
+        try:
+            log.info("Collecting metrics...")
+            metrics = await gather_statistic()
 
-        metrics = await gather_statistic()
+            METRICS_CACHE["data"] = metrics
+            METRICS_CACHE["timestamp"] = time.time()
 
-        METRICS_CACHE["data"] = metrics
-        METRICS_CACHE["timestamp"] = time.time()
+            duration = time.time() - start
 
-        return metrics
+            log.info(f"Metrics updated in {duration:.2f}s")
 
+        except Exception as e:
+            log.info(f"Metrics update failed: {e}")
 
-@app.route("/metrics")
-def metrics():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    result = loop.run_until_complete(get_cached_metrics())
-    return Response(result, mimetype="text/plain")
+        await asyncio.sleep(CACHE_TTL)
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=9190)
+@app.on_event("startup")
+async def startup_event():
+    log.info("Starting metrics background updater...")
+    asyncio.create_task(metrics_updater())
+
+
+@app.get("/metrics")
+async def metrics():
+    return Response(content=METRICS_CACHE["data"],
+                    media_type="text/plain")

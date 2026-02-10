@@ -9,7 +9,7 @@ Type=simple
 User=zvirt-exporter
 Group=zvirt-exporter
 WorkingDirectory=/opt/zvirt-exporter
-ExecStart=/usr/local/bin/gunicorn -k gevent -w 1 -b 0.0.0.0:9190 zvirt-exporter:app --timeout=60
+ExecStart=/usr/local/bin/uvicorn  --workers 1 --host 0.0.0.0 --port 9190 zvirt-exporter:app
 Restart=always
 
 [Install]

@@ -137,19 +137,4 @@ curl -v http://localhost:9190/metrics
 ```
 ---
 Architecture overview
-Prometheus
-     │
-     ▼
-  /metrics
-     │
-     ▼
- FastAPI (uvicorn)
-     │
-     ▼
-   METRICS CACHE
-     ▲
-     │
-background task (15s)
-     │
-     ▼
- zVirt / oVirt API
+Prometheus --> /metrics --> FastAPI (uvicorn) --> METRICS CACHE <-- background task (15s) --> zVirt / oVirt API

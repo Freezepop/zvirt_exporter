@@ -136,5 +136,5 @@ Test endpoint
 curl -v http://localhost:9190/metrics
 ```
 ---
-Architecture overview
+Architecture overview<br>
 Prometheus --> /metrics --> FastAPI (uvicorn) --> METRICS CACHE <-- background task (15s) --> zVirt / oVirt API

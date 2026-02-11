@@ -22,7 +22,7 @@ TOKEN_CACHE = {"access_token": None}
 TOKEN_LOCK = Lock()
 METRICS_CACHE = {"data": None,
                  "timestamp": 0}
-CACHE_TTL = 15
+CACHE_TTL = 5
 CACHE_LOCK = Lock()
 
 user = f"{USERNAME}@{DOMAIN}"
@@ -919,6 +919,10 @@ async def gather_statistic():
                                  if not isinstance(result, Exception)
                                  for line in result)
 
+        output = (f"{output}# HELP zvirt_exporter_not_ready Exporter cache is not ready\n"
+                  f"# TYPE zvirt_exporter_not_ready gauge\n"
+                  f"zvirt_exporter_not_ready 0\n")
+
         return output
 
 
@@ -927,22 +931,27 @@ async def metrics_updater():
 
     while True:
         start = time.time()
+        new_metrics = None
 
         try:
             log.info("Collecting metrics...")
-            metrics = await gather_statistic()
+            new_metrics = await gather_statistic()
+        except Exception as e:
+            log.exception(f"Metrics update failed: {e}")
 
-            METRICS_CACHE["data"] = metrics
+        if new_metrics:
+            METRICS_CACHE["data"] = new_metrics
             METRICS_CACHE["timestamp"] = time.time()
 
             duration = time.time() - start
-
             log.info(f"Metrics updated in {duration:.2f}s")
+        else:
+            log.warning("Keeping previous metrics cache")
 
-        except Exception as e:
-            log.info(f"Metrics update failed: {e}")
+        duration = int(time.time() - start)
+        sleep_time = max(0, CACHE_TTL - duration)
 
-        await asyncio.sleep(CACHE_TTL)
+        await asyncio.sleep(sleep_time)
 
 
 @app.on_event("startup")
@@ -953,5 +962,13 @@ async def startup_event():
 
 @app.get("/metrics")
 async def metrics():
+    data = METRICS_CACHE.get("data")
+    if not data:
+        return Response("# HELP zvirt_exporter_not_ready Exporter cache is not ready\n"
+                        "# TYPE zvirt_exporter_not_ready gauge\n"
+                        "zvirt_exporter_not_ready 1\n",
+                        status_code=200,
+                        media_type="text/plain")
+
     return Response(content=METRICS_CACHE["data"],
                     media_type="text/plain")

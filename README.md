@@ -57,13 +57,16 @@ aiohttp
 ```bash
 git clone https://github.com/Freezepop/zvirt_exporter.git
 cd zvirt_exporter
-2. Install dependencies
+### 2. Install dependencies
 pip install -r requirements.txt
-
+```
 Or manually:
 
+```bash
 pip install fastapi uvicorn aiohttp
-3. Configure environment
+```
+
+### 3. Configure environment
 
 Edit your environment file (used by systemd), for example:
 
@@ -71,28 +74,28 @@ Edit your environment file (used by systemd), for example:
 
 Example variables:
 
+```bash
 VIRT_SCHEME="https"
 VIRT_URL="some-hostname.example.com"
 USERNAME="some_user"
 PASSWORD="some_password"
 DOMAIN="example.com"
-
-Running manually
+```
 
 From the project directory:
-
+```bash
 uvicorn zvirt_exporter:app --host 0.0.0.0 --port 9190
-
+```
 Test:
-
+```bash
 curl https://localhost:9190/metrics
-
+```
 
 systemd service
 
 Example service file:
 /etc/systemd/system/zvirt-exporter.service
-
+```bash
 [Unit]
 Description=zVirt Exporter Service
 After=network.target
@@ -108,25 +111,31 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
-
+```
 Enable and start:
+```bash
 systemctl daemon-reload; systemctl enable --now zvirt-exporter
-
+```
 
 Check status:
+```bash
 systemctl status zvirt-exporter
-
+```
+---
 
 Use 1 worker in uvicorn to avoid duplicate API calls.
+---
 
 Troubleshooting
 Check logs
+```bash
 journalctl -u zvirt-exporter -f
-
+```
 Test endpoint
+```bash
 curl -v http://localhost:9190/metrics
-
-
+```
+---
 Architecture overview
 Prometheus
      │

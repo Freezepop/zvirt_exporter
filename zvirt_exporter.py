@@ -919,10 +919,6 @@ async def gather_statistic():
                                  if not isinstance(result, Exception)
                                  for line in result)
 
-        output = (f"{output}# HELP zvirt_exporter_not_ready Exporter cache is not ready\n"
-                  f"# TYPE zvirt_exporter_not_ready gauge\n"
-                  f"zvirt_exporter_not_ready 0\n")
-
         return output
 
 
@@ -964,11 +960,13 @@ async def startup_event():
 async def metrics():
     data = METRICS_CACHE.get("data")
     if not data:
-        return Response("# HELP zvirt_exporter_not_ready Exporter cache is not ready\n"
-                        "# TYPE zvirt_exporter_not_ready gauge\n"
-                        "zvirt_exporter_not_ready 1\n",
+        return Response(content="# HELP zvirt_exporter_not_ready Exporter cache is not ready\n"
+                                "# TYPE zvirt_exporter_not_ready gauge\n"
+                                "zvirt_exporter_not_ready 1\n",
                         status_code=200,
                         media_type="text/plain")
 
-    return Response(content=METRICS_CACHE["data"],
+    return Response(content=f"{data}# HELP zvirt_exporter_not_ready Exporter cache is not ready\n"
+                            f"# TYPE zvirt_exporter_not_ready gauge\n"
+                            f"zvirt_exporter_not_ready 0",
                     media_type="text/plain")
